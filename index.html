@@ -1,0 +1,907 @@
+
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>はなキャリ日程調整</title>
+  <style>
+    :root{
+      --bg:#f8fafc; --card:#ffffff; --line:#e5e7eb; --text:#111827; --muted:#6b7280;
+      --accent:#111827; --soft:#f9fafb;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Sans","Noto Sans JP",sans-serif;}
+    .wrap{max-width:1280px;margin:0 auto;padding:20px;}
+    h1{font-size:28px;margin:0 0 8px}
+    p{margin:0;color:var(--muted);line-height:1.6}
+    .notice{margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;}
+    .top-tabs,.sub-tabs{display:flex;gap:10px;flex-wrap:wrap}
+    .top-tabs{margin:24px 0 18px}
+    .sub-tabs{margin:22px 0 16px}
+    .tab,.sub-tab{border:1px solid var(--line);background:#fff;border-radius:14px;padding:12px 18px;font-weight:700;cursor:pointer;}
+    .tab.active,.sub-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .panel,.teacher-subpanel,.student-subpanel{display:none}
+    .panel.active,.teacher-subpanel.active,.student-subpanel.active{display:block}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+    .field{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+    .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:700}
+    select,input,button{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;background:#fff;}
+    .week-head{display:grid;grid-template-columns:160px 1fr 160px;align-items:center;gap:12px;margin:12px 0 16px;}
+    .navbtn{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;font-weight:700;cursor:pointer;}
+    .week-title{text-align:center;font-weight:800;font-size:18px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
+    .board-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;padding:10px;}
+    .board{min-width:900px;display:grid;grid-template-columns:90px repeat(7, 1fr);border-top:1px solid var(--line);border-left:1px solid var(--line);}
+    .cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-height:120px;padding:8px;background:#fff;position:relative;}
+    .cell.has-open{background:#dbeafe}
+    .cell.has-full{background:#fecaca}
+    .cell.has-mixed{background:#fde68a}
+    .header-cell{min-height:72px;text-align:center;font-weight:700;background:var(--soft);display:flex;flex-direction:column;justify-content:center;gap:4px;}
+    .time-cell{min-height:86px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#374151;background:var(--soft);}
+    .day-name{font-size:14px}
+    .day-date{font-size:22px;line-height:1}
+    .slot-list{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+    .circle-btn{width:38px;height:38px;border-radius:999px;border:1.5px solid #cbd5e1;background:#fff;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+    .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .legend span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px}
+    .card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px}
+    .stack > * + *{margin-top:12px}
+    .two-col{display:grid;grid-template-columns:340px 1fr;gap:18px}
+    .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+    .btn-primary{background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
+    .booking-item{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;justify-content:space-between;gap:12px;align-items:center;}
+    .small{font-size:14px;color:var(--muted)}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:20;}
+    .modal-backdrop.show{display:flex}
+    .modal{width:min(760px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:22px;border:1px solid var(--line);padding:18px;}
+    .modal-head{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:14px}
+    .modal-title{font-size:22px;font-weight:800}
+    .slot-option{border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:center;}
+    .slot-option + .slot-option{margin-top:10px}
+    .badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;background:#fff;margin-right:6px}
+    .mini-btn{width:auto;padding:10px 12px}
+    .course-item{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;justify-content:space-between;gap:12px;align-items:center;}
+    .course-item + .course-item{margin-top:10px}
+    .check-list{display:flex;flex-direction:column;gap:8px}
+    .check-line{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+    .check-line input{width:auto}
+    .course-setting-card{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff}
+    .course-setting-top{display:grid;grid-template-columns:minmax(220px,2fr) 120px 120px 180px;gap:14px;align-items:end}
+    .course-setting-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+    .course-setting-actions .navbtn{width:auto;min-width:96px}
+    @media (max-width: 920px){
+      .course-setting-top{grid-template-columns:1fr 1fr}
+      .course-setting-actions{justify-content:stretch}
+      .course-setting-actions .navbtn{width:100%}
+    }
+    @media (max-width: 920px){
+      .wrap{padding:12px}
+      .controls,.two-col,.three-col{grid-template-columns:1fr}
+      .week-head{grid-template-columns:1fr}
+      h1{font-size:24px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>はなキャリ日程調整</h1>
+    <div id="message" style="display:none;"></div>
+
+    <div class="top-tabs">
+      <button class="tab active" data-tab="teacher">支援者</button>
+      <button class="tab" data-tab="student">受験生</button>
+    </div>
+
+    <div id="teacher" class="panel active">
+      <div class="sub-tabs">
+        <button class="sub-tab active" data-teacher-subtab="teacher-calendar">カレンダー</button>
+        <button class="sub-tab" data-teacher-subtab="teacher-bookings">予約一覧</button>
+        <button class="sub-tab" data-teacher-subtab="teacher-settings">設定</button>
+      </div>
+
+      <div id="teacher-calendar" class="teacher-subpanel active">
+        <div class="two-col">
+          <div class="card stack">
+            <div class="field"><label>支援者名</label><select id="teacherSelect"></select></div>
+            <div class="field"><label>講座名</label><select id="teacherCourseSelect"></select></div>
+            <div class="field"><label>対応可能日</label><input type="date" id="teacherDate"></div>
+            <div class="field"><label>開始時間</label><select id="teacherTime"></select></div>
+            <div class="field"><label>この枠の定員</label><select id="teacherCapacity"></select></div>
+            <button class="btn-primary" id="addTeacherSlot">この枠を登録</button>
+            <div class="small">講座を選ぶと、その講座の基本定員が自動で入ります。</div>
+          </div>
+
+          <div>
+            <div class="week-head">
+              <button class="navbtn" id="teacherPrevWeek">← 前の週</button>
+              <div class="week-title" id="teacherWeekTitle"></div>
+              <button class="navbtn" id="teacherNextWeek">次の週 →</button>
+            </div>
+            <div class="board-wrap"><div id="teacherBoard" class="board"></div></div>
+            <div class="legend"><span>枠を押すとその時間帯の登録枠</span><span>同じ時間帯に複数講座は不可</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="teacher-bookings" class="teacher-subpanel">
+        <div class="card">
+          <div class="field" style="margin-bottom:14px"><label>支援者名</label><select id="teacherBookingSelect"></select></div>
+          <div id="teacherBookingsList"></div>
+        </div>
+      </div>
+
+      <div id="teacher-settings" class="teacher-subpanel">
+        <div class="three-col">
+          <div class="card stack">
+            <h3 style="margin:0">支援者の追加・削除</h3>
+            <div class="field"><label>新しい支援者名</label><input id="newTeacherName" type="text" placeholder="例：山本先生"></div>
+            <button class="btn-primary" id="addTeacherBtn">支援者を追加</button>
+            <div class="small">登録済み支援者一覧</div>
+            <div id="teacherList"></div>
+          </div>
+
+          <div class="card stack">
+            <h3 style="margin:0">受験生の追加・削除</h3>
+            <div class="field"><label>新しい受験生名</label><input id="newStudentName" type="text" placeholder="例：佐々木さん"></div>
+            <button class="btn-primary" id="addStudentBtn">受験生を追加</button>
+            <div class="small">登録済み受験生一覧</div>
+            <div id="studentList"></div>
+          </div>
+
+          <div class="card stack">
+            <h3 style="margin:0">講座・担当講座設定</h3>
+            <div class="field"><label>支援者名</label><select id="teacherSettingsSelect"></select></div>
+            <div class="small">担当講座</div>
+            <div id="teacherCourseChecklist" class="check-list"></div>
+            <button class="btn-primary" id="saveTeacherCoursesBtn">担当講座を保存</button>
+
+            <h3 style="margin:8px 0 0">講座種類の追加</h3>
+            <div class="field"><label>講座名</label><input id="newCourseName" type="text" placeholder="例：自己分析講座"></div>
+            <div class="field"><label>基本定員</label><input id="newCourseCapacity" type="number" min="1" max="10" value="1"></div>
+            <div class="field"><label>基本時間（コマ数）</label><input id="newCourseDuration" type="number" min="1" max="8" value="1"></div>
+            <div class="field"><label><input id="newCourseExtend" type="checkbox" style="width:auto; margin-right:8px;">人数が増えたら時間も増やす</label></div>
+            <button class="btn-primary" id="addCourseBtn">講座を追加</button>
+            <div id="courseSettingsList"></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div id="student" class="panel">
+      <div class="sub-tabs">
+        <button class="sub-tab active" data-student-subtab="student-calendar">カレンダー</button>
+        <button class="sub-tab" data-student-subtab="student-bookings">予約一覧</button>
+      </div>
+
+      <div id="student-calendar" class="student-subpanel active">
+        <div class="controls">
+          <div class="field"><label>受験生名</label><select id="studentSelect"></select></div>
+        </div>
+        <div class="week-head">
+          <button class="navbtn" id="studentPrevWeek">← 前の週</button>
+          <div class="week-title" id="studentWeekTitle"></div>
+          <button class="navbtn" id="studentNextWeek">次の週 →</button>
+        </div>
+        <div class="board-wrap"><div id="studentBoard" class="board"></div></div>
+        <div class="legend"><span>カレンダー上の講座枠を直接選択</span><span>同時間帯の二重予約は不可</span></div>
+      </div>
+
+      <div id="student-bookings" class="student-subpanel">
+        <div class="card">
+          <div class="field" style="margin-bottom:14px"><label>受験生名</label><select id="studentBookingSelect"></select></div>
+          <div id="studentBookingsList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title" id="modalTitle">詳細</div>
+          <div class="small" id="modalSub"></div>
+        </div>
+        <button class="navbtn mini-btn" id="closeModal">閉じる</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+<script>
+const SETTINGS_PASSWORD = '1234';
+let courses = [
+  { id:'career', name:'キャリア相談', defaultCapacity:2, baseDuration:1, extendByBookings:false },
+  { id:'interview', name:'面接対策', defaultCapacity:1, baseDuration:1, extendByBookings:false },
+  { id:'essay', name:'論述添削', defaultCapacity:2, baseDuration:1, extendByBookings:true }
+];
+let teachers = [
+  { id:'t1', name:'支援者A', courseIds:['career','interview'] },
+  { id:'t2', name:'支援者B', courseIds:['career','essay'] }
+];
+let students = [
+  { id:'s1', name:'受験生A' },
+  { id:'s2', name:'受験生B' }
+];
+const timeSlots = ['8:00','9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'];
+let slots = [];
+
+const today = new Date();
+let teacherWeekStart = getStartOfWeek(today);
+let studentWeekStart = getStartOfWeek(today);
+
+const el = id => document.getElementById(id);
+const teacherName = id => (teachers.find(t => t.id===id) || {}).name || '不明';
+const studentName = id => (students.find(s => s.id===id) || {}).name || '不明';
+const courseObj = id => courses.find(c => c.id===id);
+const courseName = id => ((courseObj(id) || {}).name || '不明');
+
+function setMessage(text){ el('message').textContent = text; }
+function getStartOfWeek(date){
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0,0,0,0);
+  return d;
+}
+function formatDateKey(date){
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+function getWeekDates(start){
+  return Array.from({length:7}, (_,i)=>{
+    const d = new Date(start);
+    d.setDate(start.getDate()+i);
+    return d;
+  });
+}
+function weekTitle(start){
+  const end = new Date(start);
+  end.setDate(start.getDate()+6);
+  return `${start.getMonth()+1}月${start.getDate()}日 ～ ${end.getMonth()+1}月${end.getDate()}日`;
+}
+function fillSelect(select, items, labelKey='name', valueKey='id'){
+  select.innerHTML = '';
+  items.forEach(item=>{
+    const opt = document.createElement('option');
+    opt.value = item[valueKey];
+    opt.textContent = item[labelKey];
+    select.appendChild(opt);
+  });
+}
+function remaining(slot){ return slot.capacity - slot.bookings.length; }
+function timeIndex(time){ return timeSlots.indexOf(time); }
+function getCourseDurationBlocks(courseId, bookingsLength){
+  const c = courseObj(courseId);
+  if(!c) return 1;
+  if(c.extendByBookings){
+    return Math.max(c.baseDuration || 1, bookingsLength || 1);
+  }
+  return c.baseDuration || 1;
+}
+function slotOccupiedAtTime(slot, time){
+  const startIdx = timeIndex(slot.start);
+  const currentIdx = timeIndex(time);
+  if(startIdx < 0 || currentIdx < 0) return false;
+  const blocks = slot.durationBlocks || getCourseDurationBlocks(slot.courseId, slot.bookings.length);
+  return currentIdx >= startIdx && currentIdx < startIdx + blocks;
+}
+function canExpandSlot(slot, newBookingCount){
+  const neededBlocks = getCourseDurationBlocks(slot.courseId, newBookingCount);
+  const startIdx = timeIndex(slot.start);
+  if(startIdx < 0 || startIdx + neededBlocks > timeSlots.length) return false;
+  for(let i = 1; i < neededBlocks; i++){
+    const checkTime = timeSlots[startIdx + i];
+    const conflict = slots.some(s => s.id !== slot.id && s.teacherId === slot.teacherId && s.date === slot.date && slotOccupiedAtTime(s, checkTime));
+    if(conflict) return false;
+  }
+  return true;
+}
+
+function refreshAllSelects(){
+  fillSelect(el('teacherSelect'), teachers);
+  fillSelect(el('teacherBookingSelect'), teachers);
+  fillSelect(el('teacherSettingsSelect'), teachers);
+  fillSelect(el('studentSelect'), students);
+  fillSelect(el('studentBookingSelect'), students);
+  fillSelect(el('teacherTime'), timeSlots.map(t => ({id:t, name:t})));
+  fillSelect(el('teacherCapacity'), [1,2,3,4,5,6,7,8,9,10].map(n => ({id:String(n), name:String(n)})), 'name', 'id');
+  refreshTeacherCourseOptions();
+  renderCourseSettings();
+  renderTeacherCourseChecklist();
+}
+function refreshTeacherCourseOptions(){
+  const teacherId = el('teacherSelect').value || (teachers[0] || {}).id;
+  const teacher = teachers.find(t => t.id===teacherId);
+  const list = courses.filter(c => teacher && teacher.courseIds.includes(c.id));
+  fillSelect(el('teacherCourseSelect'), list);
+  const selectedCourse = courseObj(el('teacherCourseSelect').value);
+  if(selectedCourse) el('teacherCapacity').value = selectedCourse.defaultCapacity;
+}
+function openModal(title, sub, builder){
+  el('modalTitle').textContent = title;
+  el('modalSub').textContent = sub;
+  const body = el('modalBody');
+  body.innerHTML = '';
+  builder(body);
+  el('modalBackdrop').classList.add('show');
+}
+function closeModal(){ el('modalBackdrop').classList.remove('show'); }
+
+function renderBoard(targetId, weekStart, mode){
+  const board = el(targetId);
+  board.innerHTML = '';
+  const weekDates = getWeekDates(weekStart);
+
+  const blank = document.createElement('div');
+  blank.className = 'cell header-cell';
+  board.appendChild(blank);
+
+  weekDates.forEach(d=>{
+    const head = document.createElement('div');
+    head.className = 'cell header-cell';
+    const names = ['月','火','水','木','金','土','日'];
+    head.innerHTML = `<div class="day-name">${names[(d.getDay()+6)%7]}</div><div class="day-date">${d.getDate()}</div>`;
+    board.appendChild(head);
+  });
+
+  timeSlots.forEach(time=>{
+    const timeCell = document.createElement('div');
+    timeCell.className = 'cell time-cell';
+    timeCell.textContent = time;
+    board.appendChild(timeCell);
+
+    weekDates.forEach(date=>{
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const key = formatDateKey(date);
+      let list = slots.filter(s => s.date===key && slotOccupiedAtTime(s, time));
+
+      if(mode === 'teacher'){
+        const teacherId = el('teacherSelect').value;
+        list = list.filter(s => s.teacherId===teacherId);
+      }
+
+      const openCount = list.filter(s => remaining(s) > 0).length;
+      const fullCount = list.filter(s => remaining(s) <= 0).length;
+      if(openCount > 0 && fullCount === 0) cell.classList.add('has-open');
+      if(fullCount > 0 && openCount === 0) cell.classList.add('has-full');
+      if(openCount > 0 && fullCount > 0) cell.classList.add('has-mixed');
+
+      const wrap = document.createElement('div');
+      wrap.className = 'slot-list';
+
+      if(list.length){
+        const visibleList = list.slice(0, 2);
+        visibleList.forEach(slot => {
+          const bookedNames = slot.bookings.length ? slot.bookings.map(id => studentName(id)).join('、') : 'まだ予約なし';
+          const item = document.createElement('div');
+          item.style.border = '1px solid #cbd5e1';
+          item.style.borderRadius = '10px';
+          item.style.padding = '6px 8px';
+          item.style.background = 'rgba(255,255,255,0.78)';
+          item.style.fontSize = '11px';
+          item.style.lineHeight = '1.4';
+          item.style.width = '100%';
+          item.style.cursor = 'pointer';
+          const remainLabel = remaining(slot) > 0 ? `残り ${remaining(slot)}名` : '満員';
+          item.innerHTML = `<div><strong>${courseName(slot.courseId)}</strong></div><div>支援者：${teacherName(slot.teacherId)}</div><div>受験生：${bookedNames}</div><div>${remainLabel}</div>`;
+          item.onclick = (e)=>{ e.stopPropagation(); showSlotDetails(mode, key, time, list); };
+          wrap.appendChild(item);
+        });
+
+        if(list.length > 2){
+          const more = document.createElement('div');
+          more.style.fontSize = '11px';
+          more.style.color = '#334155';
+          more.textContent = `ほか ${list.length - 2} 件`;
+          wrap.appendChild(more);
+        }
+
+        cell.style.cursor = 'pointer';
+        cell.onclick = ()=> showSlotDetails(mode, key, time, list);
+      }
+
+      cell.appendChild(wrap);
+      board.appendChild(cell);
+    });
+  });
+}
+
+function showSlotDetails(mode, dateKey, time, list){
+  if(mode === 'teacher'){
+    openModal(`${dateKey} ${time}`, 'この時間帯の登録枠', body=>{
+      list.forEach(slot=>{
+        const item = document.createElement('div');
+        item.className = 'slot-option';
+        const bookedNames = slot.bookings.length ? slot.bookings.map(id => studentName(id)).join('、') : 'まだ予約なし';
+
+        const left = document.createElement('div');
+        left.innerHTML = `
+          <div><strong>${courseName(slot.courseId)}</strong></div>
+          <div class="small">支援者：${teacherName(slot.teacherId)}</div>
+          <div class="small">予約受験生：${bookedNames}</div>
+          <div style="margin-top:8px">
+            <span class="badge">予約 ${slot.bookings.length}名</span>
+            <span class="badge">残り ${remaining(slot)}名</span>
+            <span class="badge">時間 ${slot.durationBlocks || 1}コマ</span>
+          </div>
+        `;
+
+        const right = document.createElement('div');
+        right.style.display = 'flex';
+        right.style.flexDirection = 'column';
+        right.style.gap = '8px';
+        right.style.minWidth = '120px';
+
+        const label = document.createElement('div');
+        label.className = 'small';
+        label.textContent = 'この枠の定員';
+        right.appendChild(label);
+
+        const capSelect = document.createElement('select');
+        capSelect.style.width = '100%';
+        for(let i=1;i<=10;i++){
+          const opt = document.createElement('option');
+          opt.value = String(i);
+          opt.textContent = String(i);
+          if(i === Number(slot.capacity)) opt.selected = true;
+          capSelect.appendChild(opt);
+        }
+        right.appendChild(capSelect);
+
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'navbtn mini-btn';
+        saveBtn.textContent = '定員保存';
+        saveBtn.onclick = ()=>{
+          const newCap = Math.max(1, Number(capSelect.value || 1));
+          if(newCap < slot.bookings.length){
+            setMessage('現在の予約人数より少ない定員にはできません。');
+            return;
+          }
+          slot.capacity = newCap;
+          setMessage(`この枠の定員を ${newCap} 名に更新しました。`);
+          closeModal();
+          renderAll();
+        };
+        right.appendChild(saveBtn);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'navbtn mini-btn';
+        delBtn.textContent = '削除';
+        delBtn.onclick = ()=>{
+          slots = slots.filter(s => s.id !== slot.id);
+          setMessage('枠を削除しました。');
+          closeModal();
+          renderAll();
+        };
+        right.appendChild(delBtn);
+
+        item.appendChild(left);
+        item.appendChild(right);
+        body.appendChild(item);
+      });
+    });
+  } else {
+    const studentId = el('studentSelect').value;
+    openModal(`${dateKey} ${time}`, '講師と残り枠を見て選択できます。', body=>{
+      list.forEach(slot=>{
+        const item = document.createElement('div');
+        item.className = 'slot-option';
+        const bookedNames = slot.bookings.length ? slot.bookings.map(id => studentName(id)).join('、') : 'まだ予約なし';
+        item.innerHTML = `<div><div><strong>支援者：${teacherName(slot.teacherId)}</strong></div><div class="small">${courseName(slot.courseId)}</div><div class="small">予約受験生：${bookedNames}</div><div style="margin-top:8px"><span class="badge">残り ${remaining(slot)}名</span><span class="badge">定員 ${slot.capacity}名</span><span class="badge">時間 ${slot.durationBlocks || 1}コマ</span></div></div><div></div>`;
+        const right = item.lastElementChild;
+        const btn = document.createElement('button');
+        btn.className = 'btn-primary mini-btn';
+        if(slot.bookings.includes(studentId)){
+          btn.textContent = '予約を取り消す';
+          btn.disabled = false;
+          btn.onclick = ()=>{
+            slot.bookings = slot.bookings.filter(id => id !== studentId);
+            slot.durationBlocks = getCourseDurationBlocks(slot.courseId, slot.bookings.length);
+            setMessage('予約を取り消しました。');
+            closeModal();
+            renderAll();
+          };
+        } else if(hasStudentConflict(studentId, slot)){
+          btn.textContent = '同時間に予約あり';
+          btn.disabled = true;
+        } else if(remaining(slot) <= 0){
+          btn.textContent = '満員';
+          btn.disabled = true;
+        } else {
+          btn.textContent = '選択する';
+          btn.onclick = ()=>{
+            const newCount = slot.bookings.length + 1;
+            if(!canExpandSlot(slot, newCount)){
+              setMessage('人数増加に必要な連続時間を確保できないため、この枠は予約できません。');
+              return;
+            }
+            slot.bookings.push(studentId);
+            slot.durationBlocks = getCourseDurationBlocks(slot.courseId, slot.bookings.length);
+            setMessage('予約を入れました。');
+            closeModal();
+            renderAll();
+          };
+        }
+        right.appendChild(btn);
+        body.appendChild(item);
+      });
+    });
+  }
+}
+
+function hasStudentConflict(studentId, targetSlot){
+  return slots.some(s =>
+    s.id !== targetSlot.id &&
+    s.bookings.includes(studentId) &&
+    s.date === targetSlot.date &&
+    (
+      slotOccupiedAtTime(s, targetSlot.start) ||
+      slotOccupiedAtTime(targetSlot, s.start)
+    )
+  );
+}
+
+
+function renderTeacherList(){
+  const wrap = el('teacherList');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  teachers.forEach(t => {
+    const item = document.createElement('div');
+    item.className = 'course-item';
+    item.innerHTML = `<div>${t.name}</div><div></div>`;
+    const btn = document.createElement('button');
+    btn.className = 'navbtn mini-btn';
+    btn.textContent = '削除';
+    btn.onclick = ()=>{
+      if(teachers.length <= 1){
+        setMessage('支援者は1人以上必要です');
+        return;
+      }
+      teachers = teachers.filter(x => x.id !== t.id);
+      slots = slots.filter(s => s.teacherId !== t.id);
+      setMessage('支援者を削除しました');
+      refreshAllSelects();
+if(!el('teacherDate').value){
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth()+1).padStart(2,'0');
+  const dd = String(now.getDate()).padStart(2,'0');
+  el('teacherDate').value = `${yyyy}-${mm}-${dd}`;
+}
+      renderAll();
+    };
+    item.lastElementChild.appendChild(btn);
+    wrap.appendChild(item);
+  });
+}
+
+function renderStudentList(){
+  const wrap = el('studentList');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  students.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'course-item';
+    item.innerHTML = `<div>${s.name}</div><div></div>`;
+    const btn = document.createElement('button');
+    btn.className = 'navbtn mini-btn';
+    btn.textContent = '削除';
+    btn.onclick = ()=>{
+      students = students.filter(x => x.id !== s.id);
+      slots.forEach(slot => {
+        slot.bookings = slot.bookings.filter(id => id !== s.id);
+        slot.durationBlocks = getCourseDurationBlocks(slot.courseId, slot.bookings.length);
+      });
+      setMessage('受験生を削除しました');
+      refreshAllSelects();
+      renderAll();
+    };
+    item.lastElementChild.appendChild(btn);
+    wrap.appendChild(item);
+  });
+}
+
+function renderTeacherBookings(){
+  const teacherId = el('teacherBookingSelect').value;
+  const list = slots.filter(s => s.teacherId === teacherId && s.bookings.length > 0).sort((a,b)=>(a.date + a.start).localeCompare(b.date + b.start));
+  const wrap = el('teacherBookingsList');
+  wrap.innerHTML = '';
+  if(!list.length){
+    wrap.innerHTML = '<div class="small">この支援者の予約はまだありません。</div>';
+    return;
+  }
+  list.forEach(slot=>{
+    slot.bookings.forEach(studentId=>{
+      const item = document.createElement('div');
+      item.className = 'booking-item';
+      item.innerHTML = `<div><div><strong>${slot.date} ${slot.start}</strong></div><div class="small">${courseName(slot.courseId)} / ${studentName(studentId)}</div></div><div></div>`;
+      const btn = document.createElement('button');
+      btn.className = 'navbtn mini-btn';
+      btn.textContent = '予約を取り消す';
+      btn.onclick = ()=>{
+        slot.bookings = slot.bookings.filter(id => id !== studentId);
+        slot.durationBlocks = getCourseDurationBlocks(slot.courseId, slot.bookings.length);
+        setMessage('予約をキャンセルしました。');
+        renderAll();
+      };
+      item.lastElementChild.appendChild(btn);
+      wrap.appendChild(item);
+    });
+  });
+}
+
+function renderStudentBookings(){
+  const studentId = el('studentBookingSelect').value;
+  const list = slots.filter(s => s.bookings.includes(studentId)).sort((a,b)=>(a.date + a.start).localeCompare(b.date + b.start));
+  const wrap = el('studentBookingsList');
+  wrap.innerHTML = '';
+  if(!list.length){
+    wrap.innerHTML = '<div class="small">この受験生の予約はまだありません。</div>';
+    return;
+  }
+  list.forEach(slot=>{
+    const item = document.createElement('div');
+    item.className = 'booking-item';
+    item.innerHTML = `<div><div><strong>${slot.date} ${slot.start}</strong></div><div class="small">${courseName(slot.courseId)} / ${teacherName(slot.teacherId)}</div></div><div></div>`;
+    const btn = document.createElement('button');
+    btn.className = 'navbtn mini-btn';
+    btn.textContent = 'キャンセル';
+    btn.onclick = ()=>{
+      slot.bookings = slot.bookings.filter(id => id !== studentId);
+      slot.durationBlocks = getCourseDurationBlocks(slot.courseId, slot.bookings.length);
+      setMessage('予約をキャンセルしました。');
+      renderAll();
+    };
+    item.lastElementChild.appendChild(btn);
+    wrap.appendChild(item);
+  });
+}
+
+function renderCourseSettings(){
+  const wrap = el('courseSettingsList');
+  wrap.innerHTML = '';
+  if(!courses.length){
+    wrap.innerHTML = '<div class="small">講座がありません。</div>';
+    return;
+  }
+  courses.forEach(c=>{
+    const item = document.createElement('div');
+    item.className = 'course-setting-card';
+    item.innerHTML = `<div class="course-setting-top"><div><div class="small">講座名</div><input value="${c.name}" data-course-name="${c.id}" style="width:100%;" placeholder="講座名を入力"></div><div><div class="small">基本定員</div><input type="number" min="1" max="10" value="${c.defaultCapacity}" data-course-capacity="${c.id}"></div><div><div class="small">基本時間</div><input type="number" min="1" max="8" value="${c.baseDuration || 1}" data-course-duration="${c.id}"></div><div><div class="small">人数連動</div><label class="small" style="display:flex;align-items:center;gap:8px;padding-top:10px;"><input type="checkbox" data-course-extend="${c.id}" style="width:auto;" ${(c.extendByBookings ? 'checked' : '')}>時間を増やす</label></div></div><div class="course-setting-actions"><button class="navbtn mini-btn" data-save-course="${c.id}">保存</button><button class="navbtn mini-btn" data-delete-course="${c.id}">削除</button></div>`;
+    wrap.appendChild(item);
+  });
+
+  wrap.querySelectorAll('[data-save-course]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.getAttribute('data-save-course');
+      const nameInput = wrap.querySelector('[data-course-name="' + id + '"]');
+      const capInput = wrap.querySelector('[data-course-capacity="' + id + '"]');
+      const durationInput = wrap.querySelector('[data-course-duration="' + id + '"]');
+      const extendInput = wrap.querySelector('[data-course-extend="' + id + '"]');
+      const target = courses.find(c => c.id === id);
+      const newName = nameInput.value.trim();
+      const newCap = Math.max(1, Number(capInput.value || 1));
+      const newDuration = Math.max(1, Number(durationInput.value || 1));
+      const newExtend = !!extendInput.checked;
+      if(!newName){
+        setMessage('講座名を入れてください。');
+        return;
+      }
+      target.name = newName;
+      target.defaultCapacity = newCap;
+      target.baseDuration = newDuration;
+      target.extendByBookings = newExtend;
+      slots.forEach(s => {
+        if(s.courseId === id){
+          s.durationBlocks = getCourseDurationBlocks(s.courseId, s.bookings.length);
+        }
+      });
+      setMessage('講座設定を更新しました。');
+      refreshAllSelects();
+      renderAll();
+    };
+  });
+
+  wrap.querySelectorAll('[data-delete-course]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.getAttribute('data-delete-course');
+      if(courses.length <= 1){
+        setMessage('講座は1つ以上必要です。');
+        return;
+      }
+      courses = courses.filter(c => c.id !== id);
+      teachers = teachers.map(t => ({ id:t.id, name:t.name, courseIds:t.courseIds.filter(cid => cid !== id) }));
+      slots = slots.filter(s => s.courseId !== id);
+      setMessage('講座を削除しました。');
+      refreshAllSelects();
+      renderAll();
+    };
+  });
+}
+
+function renderTeacherCourseChecklist(){
+  const teacherId = el('teacherSettingsSelect').value || ((teachers[0] || {}).id);
+  const teacher = teachers.find(t => t.id === teacherId);
+  const wrap = el('teacherCourseChecklist');
+  wrap.innerHTML = '';
+  courses.forEach(c=>{
+    const line = document.createElement('label');
+    line.className = 'check-line';
+    const checked = teacher && teacher.courseIds.includes(c.id) ? 'checked' : '';
+    line.innerHTML = `<input type="checkbox" value="${c.id}" ${checked}><span>${c.name}（基本定員 ${c.defaultCapacity}名）</span>`;
+    wrap.appendChild(line);
+  });
+}
+
+function renderAll(){
+  el('teacherWeekTitle').textContent = weekTitle(teacherWeekStart);
+  el('studentWeekTitle').textContent = weekTitle(studentWeekStart);
+  renderBoard('teacherBoard', teacherWeekStart, 'teacher');
+  renderBoard('studentBoard', studentWeekStart, 'student');
+  renderTeacherBookings();
+  renderStudentBookings();
+  renderTeacherList();
+  renderStudentList();
+  renderCourseSettings();
+  renderTeacherCourseChecklist();
+}
+
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    el(btn.dataset.tab).classList.add('active');
+  });
+});
+document.querySelectorAll('[data-teacher-subtab]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const target = btn.dataset.teacherSubtab;
+
+    if(target === 'teacher-settings'){
+      const pass = prompt('設定画面に入るにはパスワードを入力してください');
+      if(pass !== SETTINGS_PASSWORD){
+        setMessage('パスワードが違います');
+        return;
+      }
+    }
+
+    document.querySelectorAll('[data-teacher-subtab]').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.teacher-subpanel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    el(target).classList.add('active');
+  });
+});
+document.querySelectorAll('[data-student-subtab]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('[data-student-subtab]').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.student-subpanel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    el(btn.dataset.studentSubtab).classList.add('active');
+  });
+});
+
+el('closeModal').onclick = closeModal;
+el('modalBackdrop').addEventListener('click', e=>{ if(e.target.id === 'modalBackdrop') closeModal(); });
+
+refreshAllSelects();
+
+el('teacherSelect').addEventListener('change', ()=>{ refreshTeacherCourseOptions(); renderAll(); });
+el('teacherCourseSelect').addEventListener('change', ()=>{
+  const c = courseObj(el('teacherCourseSelect').value);
+  if(c) el('teacherCapacity').value = String(c.defaultCapacity);
+});
+el('teacherBookingSelect').addEventListener('change', renderTeacherBookings);
+el('teacherSettingsSelect').addEventListener('change', ()=>{ renderTeacherCourseChecklist(); });
+el('studentSelect').addEventListener('change', renderAll);
+el('studentBookingSelect').addEventListener('change', renderStudentBookings);
+
+el('teacherPrevWeek').onclick = ()=>{ teacherWeekStart = new Date(teacherWeekStart.getFullYear(), teacherWeekStart.getMonth(), teacherWeekStart.getDate()-7); renderAll(); };
+el('teacherNextWeek').onclick = ()=>{ teacherWeekStart = new Date(teacherWeekStart.getFullYear(), teacherWeekStart.getMonth(), teacherWeekStart.getDate()+7); renderAll(); };
+el('studentPrevWeek').onclick = ()=>{ studentWeekStart = new Date(studentWeekStart.getFullYear(), studentWeekStart.getMonth(), studentWeekStart.getDate()-7); renderAll(); };
+el('studentNextWeek').onclick = ()=>{ studentWeekStart = new Date(studentWeekStart.getFullYear(), studentWeekStart.getMonth(), studentWeekStart.getDate()+7); renderAll(); };
+
+el('addTeacherSlot').onclick = ()=>{
+  const teacherId = el('teacherSelect').value;
+  const courseId = el('teacherCourseSelect').value;
+  const date = el('teacherDate').value;
+  const start = el('teacherTime').value;
+  const capacity = Math.max(1, Number(el('teacherCapacity').value || 1));
+  if(!courseId){
+    setMessage('先に支援者の担当講座を設定してください。');
+    return;
+  }
+  const baseBlocks = getCourseDurationBlocks(courseId, 0);
+  const startIdx = timeIndex(start);
+  if(startIdx < 0 || startIdx + baseBlocks > timeSlots.length){
+    setMessage('この講座の必要時間をカレンダー内に収められません。');
+    return;
+  }
+  const conflictExists = slots.some(s => s.teacherId===teacherId && s.date===date && Array.from({length: baseBlocks}, (_,i) => timeSlots[startIdx + i]).some(t => slotOccupiedAtTime(s, t)));
+  if(conflictExists){
+    setMessage('同じ支援者の必要時間帯に別の枠があります。');
+    return;
+  }
+  slots.push({ id:'sl' + Date.now(), teacherId, courseId, date, start, capacity, bookings:[], durationBlocks:baseBlocks });
+  setMessage('支援者の対応可能枠を登録しました。');
+  renderAll();
+};
+
+el('addTeacherBtn').onclick = ()=>{
+  const name = el('newTeacherName').value.trim();
+  if(!name){
+    setMessage('支援者名を入れてください。');
+    return;
+  }
+  const id = 't' + Date.now();
+  teachers.push({ id, name, courseIds: [] });
+  el('newTeacherName').value = '';
+  setMessage('支援者を追加しました。担当講座を設定してください。');
+  refreshAllSelects();
+  el('teacherSelect').value = id;
+  el('teacherBookingSelect').value = id;
+  el('teacherSettingsSelect').value = id;
+  renderAll();
+};
+
+el('addStudentBtn').onclick = ()=>{
+  const name = el('newStudentName').value.trim();
+  if(!name){
+    setMessage('受験生名を入れてください。');
+    return;
+  }
+  const id = 's' + Date.now();
+  students.push({ id, name });
+  el('newStudentName').value = '';
+  setMessage('受験生を追加しました。');
+  refreshAllSelects();
+  el('studentSelect').value = id;
+  el('studentBookingSelect').value = id;
+  renderAll();
+};
+
+el('addCourseBtn').onclick = ()=>{
+  const name = el('newCourseName').value.trim();
+  const cap = Math.max(1, Number(el('newCourseCapacity').value || 1));
+  const duration = Math.max(1, Number(el('newCourseDuration').value || 1));
+  const extend = !!el('newCourseExtend').checked;
+  if(!name){
+    setMessage('講座名を入れてください。');
+    return;
+  }
+  const id = 'course_' + Date.now();
+  courses.push({ id, name, defaultCapacity: cap, baseDuration: duration, extendByBookings: extend });
+  el('newCourseName').value = '';
+  el('newCourseCapacity').value = '1';
+  el('newCourseDuration').value = '1';
+  el('newCourseExtend').checked = false;
+  setMessage('講座を追加しました。');
+  refreshAllSelects();
+  renderAll();
+};
+
+el('saveTeacherCoursesBtn').onclick = ()=>{
+  const teacherId = el('teacherSettingsSelect').value;
+  const teacher = teachers.find(t => t.id === teacherId);
+  const checked = [...el('teacherCourseChecklist').querySelectorAll('input[type="checkbox"]:checked')].map(i => i.value);
+  if(!checked.length){
+    setMessage('担当講座を1つ以上選んでください。');
+    return;
+  }
+  teacher.courseIds = checked;
+  slots = slots.filter(s => !(s.teacherId === teacherId && !checked.includes(s.courseId)));
+  setMessage('支援者の担当講座を保存しました。対象外の既存枠は削除しました。');
+  refreshAllSelects();
+  renderAll();
+};
+
+renderAll();
+</script>
+</body>
+</html>
